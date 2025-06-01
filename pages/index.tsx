@@ -1,130 +1,231 @@
-// pages/index.tsx - Main landing page with setup instructions
+// pages/index.tsx - Landing page with built-in meeting submission form
+import { useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import styles from '../styles/Home.module.css'
 
 export default function Home() {
+  const [emailBody, setEmailBody] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [result, setResult] = useState<{type: 'success' | 'error', message: string} | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setResult(null)
+
+    try {
+      // Extract a subject from the content if possible, or use default
+      const lines = emailBody.split('\n').filter(line => line.trim())
+      const firstLine = lines[0] || 'Meeting Summary'
+      const autoSubject = firstLine.length > 50 ? 'Meeting Summary' : firstLine
+
+      const response = await fetch('/api/process-meeting-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject: autoSubject,
+          sender: 'manual-submission@user.com',
+          'body-plain': emailBody,
+          recipient: 'manual-submission',
+          timestamp: new Date().toISOString(),
+          'message-headers': ''
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setResult({
+          type: 'success',
+          message: `✅ Success! Your meeting has been processed (ID: ${data.emailId}). Check your Trello board for new cards!`
+        })
+        setEmailBody('')
+      } else {
+        setResult({
+          type: 'error',
+          message: `❌ Error: ${data.error || 'Unknown error occurred'}`
+        })
+      }
+    } catch (error) {
+      setResult({
+        type: 'error',
+        message: `❌ Network error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={styles.container}>
       <Head>
-        <title>Meeting Automation System</title>
-        <meta name="description" content="Automatically process meeting summaries and create Trello cards" />
+        <title>Meeting Automation - Turn Emails into Trello Cards</title>
+        <meta name="description" content="Automatically convert meeting summaries into organized Trello cards with AI" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-center mb-8">Meeting Automation System</h1>
-          
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-semibold mb-4">How It Works</h2>
-            <div className="space-y-4">
-              <div className="flex items-start">
-                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0">1</div>
-                <div>
-                  <h3 className="font-medium">Submit Meeting Content</h3>
-                  <p className="text-gray-600">Copy and paste the entire meeting email content from Fathom or Scribbl into the submission form.</p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0">2</div>
-                <div>
-                  <h3 className="font-medium">AI Processing</h3>
-                  <p className="text-gray-600">OpenAI extracts meeting summaries, action items, assignees, and due dates.</p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0">3</div>
-                <div>
-                  <h3 className="font-medium">Trello Integration</h3>
-                  <p className="text-gray-600">Automatically creates cards in your Trello board for summaries and action items.</p>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0">4</div>
-                <div>
-                  <h3 className="font-medium">Track Progress</h3>
-                  <p className="text-gray-600">Monitor processing status and retry failed emails through the dashboard.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className={styles.main}>
+        <header className={styles.header}>
+          <h1 className={styles.title}>Meeting Automation</h1>
+          <p className={styles.subtitle}>
+            Transform your meeting summaries into organized Trello cards automatically. 
+            Just paste your email content below and let AI do the rest!
+          </p>
+        </header>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-4">✉️ Submit Meeting</h3>
-              <p className="text-gray-600 mb-4">
-                Paste meeting email content to automatically create organized Trello cards.
-              </p>
-              <Link href="/submit-meeting" className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-block">
-                Submit Meeting Content
-              </Link>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-4">📊 Dashboard</h3>
-              <p className="text-gray-600 mb-4">
-                View processing statistics, service health, and manage failed emails.
-              </p>
-              <Link href="/dashboard" className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded inline-block">
-                Open Dashboard
-              </Link>
-            </div>
-
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-4">🔧 API Endpoints</h3>
-              <p className="text-gray-600 mb-4">
-                API routes for webhook integration and system management.
-              </p>
-              <div className="space-y-2 text-sm">
-                <div><code className="bg-gray-100 px-2 py-1 rounded">/api/process-meeting-email</code> - Main webhook</div>
-                <div><code className="bg-gray-100 px-2 py-1 rounded">/api/status</code> - System status</div>
-                <div><code className="bg-gray-100 px-2 py-1 rounded">/api/health</code> - Health check</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-semibold mb-4">🛠️ Setup Instructions</h3>
+        <div className={styles.content}>
+          {/* Main Form Section */}
+          <div className={styles.formSection}>
+            <h2 className={styles.formTitle}>📧 Submit Your Meeting Content</h2>
             
-            <h4 className="font-medium mb-2">1. Environment Variables</h4>
-            <p className="text-gray-600 mb-4">Configure your <code className="bg-gray-100 px-2 py-1 rounded">.env.local</code> file with:</p>
-            <ul className="list-disc pl-6 space-y-1 text-sm text-gray-600 mb-6">
-              <li>Supabase URL and service role key</li>
-              <li>OpenAI API key</li>
-              <li>Trello API key, token, and board/list IDs</li>
-            </ul>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <div className={styles.inputGroup}>
+                <label htmlFor="meeting-content" className={styles.label}>
+                  Meeting Email Content
+                </label>
+                <textarea
+                  id="meeting-content"
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Paste your entire meeting summary email here...
 
-            <h4 className="font-medium mb-2">2. Database Setup</h4>
-            <p className="text-gray-600 mb-4">Run the SQL schema in your Supabase project:</p>
-            <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto mb-6">
-{`-- Run this in your Supabase SQL editor
--- See supabase/schema.sql for complete schema`}
-            </pre>
+Example:
+Meeting: Project Kickoff
+Date: June 1, 2025
+Attendees: John, Sarah, Mike
 
-            <h4 className="font-medium mb-2 mt-6">4. Start Using</h4>
-            <p className="text-gray-600 mb-4">Ready to process meeting content:</p>
-            <ul className="list-disc pl-6 space-y-1 text-sm text-gray-600">
-              <li>Go to the <strong>Submit Meeting</strong> page</li>
-              <li>Copy/paste your entire meeting email content</li>
-              <li>Click "Process" and check your Trello board!</li>
-            </ul>
-            <p className="text-gray-600 mb-4">Create lists in your Trello board:</p>
-            <ul className="list-disc pl-6 space-y-1 text-sm text-gray-600">
-              <li><strong>Meeting Summaries</strong> - For meeting overview cards</li>
-              <li><strong>Action Items</strong> - For individual task cards</li>
-              <li><strong>Completed Items</strong> - For finished tasks (optional)</li>
-            </ul>
+Summary: We discussed the project timeline and assigned initial tasks...
+
+Action Items:
+1. John will create project plan by June 10
+2. Sarah will set up development environment by June 5
+3. Mike will design wireframes by June 8"
+                  rows={12}
+                  className={styles.textarea}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !emailBody.trim()}
+                className={styles.submitButton}
+              >
+                {isSubmitting ? '⏳ Processing...' : '🚀 Create Trello Cards'}
+              </button>
+            </form>
+
+            {result && (
+              <div className={`${styles.result} ${result.type === 'success' ? styles.resultSuccess : styles.resultError}`}>
+                {result.message}
+              </div>
+            )}
           </div>
 
-          <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              Need help? Check the{' '}
-              <Link href="/dashboard" className="text-blue-600 hover:underline">
-                dashboard
-              </Link>
-              {' '}for system status and testing.
-            </p>
+          {/* Information Section */}
+          <div className={styles.infoSection}>
+            <div className={styles.infoCard}>
+              <h3 className={styles.infoCardTitle}>
+                🎯 How It Works
+              </h3>
+              <div className={styles.infoCardContent}>
+                <ul className={styles.stepsList}>
+                  <li className={styles.stepItem}>
+                    <span className={styles.stepNumber}>1</span>
+                    <span className={styles.stepText}>Copy your meeting email from Fathom or Scribbl</span>
+                  </li>
+                  <li className={styles.stepItem}>
+                    <span className={styles.stepNumber}>2</span>
+                    <span className={styles.stepText}>Paste the entire content into the text area</span>
+                  </li>
+                  <li className={styles.stepItem}>
+                    <span className={styles.stepNumber}>3</span>
+                    <span className={styles.stepText}>AI extracts summaries, action items, and assignees</span>
+                  </li>
+                  <li className={styles.stepItem}>
+                    <span className={styles.stepNumber}>4</span>
+                    <span className={styles.stepText}>Organized Trello cards are created automatically</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className={styles.infoCard}>
+              <h3 className={styles.infoCardTitle}>
+                🔗 Quick Links
+              </h3>
+              <div className={styles.infoCardContent}>
+                <ul className={styles.linksList}>
+                  <li className={styles.linkItem}>
+                    <Link href="/dashboard" className={styles.link}>
+                      → View System Dashboard
+                    </Link>
+                  </li>
+                  <li className={styles.linkItem}>
+                    <a
+                      href="https://trello.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.link}
+                    >
+                      → Open Your Trello Board
+                    </a>
+                  </li>
+                  <li className={styles.linkItem}>
+                    <Link href="/api/test-processing" className={styles.link}>
+                      → Test with Sample Data
+                    </Link>
+                  </li>
+                  <li className={styles.linkItem}>
+                    <Link href="/api/status" className={styles.link}>
+                      → Check System Status
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className={styles.infoCard}>
+              <div className={styles.tip}>
+                <h4 className={styles.tipTitle}>
+                  💡 Pro Tips
+                </h4>
+                <div className={styles.tipContent}>
+                  The AI works best when your content includes:
+                  <br />• Clear meeting participants and roles
+                  <br />• Specific action items with assignee names
+                  <br />• Due dates ("by Friday", "June 10th", "next week")
+                  <br />• Priority indicators ("urgent", "ASAP", "high priority")
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.infoCard}>
+              <h3 className={styles.infoCardTitle}>
+                📋 What Gets Created
+              </h3>
+              <div className={styles.infoCardContent}>
+                <strong>Meeting Summary Card:</strong> Overview with participants, date, and key decisions
+                <br /><br />
+                <strong>Action Item Cards:</strong> Individual tasks with assignees, due dates, and priority labels
+                <br /><br />
+                <strong>Automatic Organization:</strong> Cards are sorted by priority and due date
+              </div>
+            </div>
           </div>
         </div>
+
+        <footer className={styles.footer}>
+          <p>
+            Powered by AI • Built with Next.js • Deployed on Vercel
+            <br />
+            Turn meeting chaos into organized action items ✨
+          </p>
+        </footer>
       </div>
     </div>
   )

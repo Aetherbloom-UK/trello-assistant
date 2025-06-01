@@ -12,10 +12,8 @@ const nextConfig = {
     responseLimit: false,
   },
 
-  // Environment variables validation
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
+  // CSS Modules configuration
+  cssModules: true,
 
   // Headers for CORS if needed
   async headers() {
