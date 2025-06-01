@@ -20,8 +20,8 @@ export default function Home() {
               <div className="flex items-start">
                 <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-4 flex-shrink-0">1</div>
                 <div>
-                  <h3 className="font-medium">Forward Meeting Emails</h3>
-                  <p className="text-gray-600">Forward meeting summary emails from Fathom or Scribbl to your automation email address.</p>
+                  <h3 className="font-medium">Submit Meeting Content</h3>
+                  <p className="text-gray-600">Copy and paste the entire meeting email content from Fathom or Scribbl into the submission form.</p>
                 </div>
               </div>
               <div className="flex items-start">
@@ -49,6 +49,16 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-xl font-semibold mb-4">✉️ Submit Meeting</h3>
+              <p className="text-gray-600 mb-4">
+                Paste meeting email content to automatically create organized Trello cards.
+              </p>
+              <Link href="/submit-meeting" className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-block">
+                Submit Meeting Content
+              </Link>
+            </div>
+
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-xl font-semibold mb-4">📊 Dashboard</h3>
               <p className="text-gray-600 mb-4">
@@ -90,13 +100,13 @@ export default function Home() {
 -- See supabase/schema.sql for complete schema`}
             </pre>
 
-            <h4 className="font-medium mb-2">3. Email-to-Webhook Service</h4>
-            <p className="text-gray-600 mb-4">Set up Mailgun or similar service to forward emails to:</p>
-            <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-              https://your-app.vercel.app/api/process-meeting-email
-            </code>
-
-            <h4 className="font-medium mb-2 mt-6">4. Trello Board Setup</h4>
+            <h4 className="font-medium mb-2 mt-6">4. Start Using</h4>
+            <p className="text-gray-600 mb-4">Ready to process meeting content:</p>
+            <ul className="list-disc pl-6 space-y-1 text-sm text-gray-600">
+              <li>Go to the <strong>Submit Meeting</strong> page</li>
+              <li>Copy/paste your entire meeting email content</li>
+              <li>Click "Process" and check your Trello board!</li>
+            </ul>
             <p className="text-gray-600 mb-4">Create lists in your Trello board:</p>
             <ul className="list-disc pl-6 space-y-1 text-sm text-gray-600">
               <li><strong>Meeting Summaries</strong> - For meeting overview cards</li>
