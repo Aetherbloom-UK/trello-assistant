@@ -100,7 +100,7 @@ function validateParsedData(data: any): ParsedMeetingData {
   const validated: ParsedMeetingData = {
     summary: typeof data.summary === 'string' ? data.summary : 'Unable to extract meeting summary',
     action_items: Array.isArray(data.action_items) ? data.action_items.map(validateActionItem) : [],
-    participants: Array.isArray(data.participants) ? data.participants.filter(p => typeof p === 'string') : [],
+    participants: Array.isArray(data.participants) ? data.participants.filter((p: unknown): p is string => typeof p === 'string') : [],
     meeting_date: typeof data.meeting_date === 'string' ? data.meeting_date : undefined
   }
 
