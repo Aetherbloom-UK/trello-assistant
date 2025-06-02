@@ -144,8 +144,11 @@ async function processEmailAsync(emailId: string): Promise<void> {
       emailRecord.email_subject
     )
 
-    // Create action item cards
-    const actionItemCardIds = await trelloClient.createActionItemCards(parsedData.action_items)
+    // Create action item cards with meeting date
+    const actionItemCardIds = await trelloClient.createActionItemCards(
+      parsedData.action_items,
+      parsedData.meeting_date // Pass the meeting date here
+    )
 
     // Final update: mark as completed
     await supabase

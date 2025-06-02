@@ -59,12 +59,12 @@ export class TrelloClient {
     }
   }
 
-  async createActionItemCards(actionItems: ActionItem[]): Promise<string[]> {
+  async createActionItemCards(actionItems: ActionItem[], meetingDate?: string): Promise<string[]> {
     const createdCardIds: string[] = []
 
     for (const item of actionItems) {
       try {
-        const cardId = await this.createActionItemCard(item)
+        const cardId = await this.createActionItemCard(item, meetingDate)
         createdCardIds.push(cardId)
       } catch (error) {
         console.error(`Error creating action item card for "${item.task}":`, error)
@@ -75,7 +75,7 @@ export class TrelloClient {
     return createdCardIds
   }
 
-  private async createActionItemCard(actionItem: ActionItem): Promise<string> {
+  private async createActionItemCard(actionItem: ActionItem, meetingDate?: string): Promise<string> {
     const cardName = `${actionItem.task} (${actionItem.assignee})`
     const cardDescription = this.formatActionItemDescription(actionItem)
 
@@ -86,9 +86,23 @@ export class TrelloClient {
       pos: 'top'
     }
 
-    // Add due date if specified
+    // Determine which date to use for the card
+    let cardDueDate: string | null = null
+
     if (actionItem.due_date) {
-      cardData.due = new Date(actionItem.due_date).toISOString()
+      // Use the specific due date if provided
+      cardDueDate = new Date(actionItem.due_date).toISOString()
+    } else if (meetingDate) {
+      // Use the meeting date if no specific due date is provided
+      cardDueDate = new Date(meetingDate).toISOString()
+    } else {
+      // Fall back to current date if no other date is available
+      cardDueDate = new Date().toISOString()
+    }
+
+    // Add the determined due date to the card
+    if (cardDueDate) {
+      cardData.due = cardDueDate
     }
 
     const response = await axios.post(
@@ -101,7 +115,7 @@ export class TrelloClient {
     // Add priority label
     await this.addPriorityLabel(card.id, actionItem.priority)
 
-    console.log(`Created action item card: ${card.id}`)
+    console.log(`Created action item card: ${card.id} with due date: ${cardDueDate}`)
     return card.id
   }
 
