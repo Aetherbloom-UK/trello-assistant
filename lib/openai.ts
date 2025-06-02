@@ -19,19 +19,22 @@ Email Content: "${emailContent}"
 
 Please extract the following information and return it as a JSON object:
 
-1. A concise meeting summary (2-3 sentences)
+1. The existing meeting summary - IMPORTANT: If there's already a detailed "MEETING SUMMARY" or "Meeting Summary" section in the content, extract and preserve that entire section exactly as written. Do NOT create a new condensed summary. If no existing summary section is found, then create a brief 2-3 sentence summary.
+
 2. Action items with assignees and due dates
+
 3. Meeting participants
+
 4. Meeting date/time if mentioned
 
 Return the data in this exact JSON format:
 {
-  "summary": "Brief summary of the meeting",
+  "summary": "The existing meeting summary content from the email, or brief summary if none exists",
   "action_items": [
     {
       "id": "unique_id",
       "task": "Description of the task",
-      "assignee": "Person assigned (use 'Unassigned' if not specified)",
+      "assignee": "Person's first name only (use 'Unassigned' if not specified, never use company names)",
       "due_date": "YYYY-MM-DD or null if not specified",
       "priority": "low|medium|high (infer from context)",
       "completed": false
@@ -41,8 +44,19 @@ Return the data in this exact JSON format:
   "meeting_date": "YYYY-MM-DD HH:mm or null if not found"
 }
 
-Important notes:
-- Extract actual names from the content, don't make them up
+Important notes for summary extraction:
+- Look for sections like "MEETING SUMMARY", "Meeting Summary", "Summary:", "SUMMARY", etc.
+- If found, preserve the entire content of that section including subsections, bullet points, and formatting
+- Include Meeting Purpose, Key Takeaways, Topics, and any other subsections that exist
+- DO NOT condense or summarize an existing summary - preserve it as-is
+- Only create a new brief summary if no existing summary section is found
+
+Important notes for action items and assignees:
+- Use ONLY first names for assignees (e.g., "James Daniel Whitford" becomes "James")
+- "Aetherbloom" is a company name, NOT a person - do not assign tasks to "Aetherbloom"
+- If a task is assigned to "Aetherbloom", try to infer the actual person from context (like "Della" or other participants), or use "Unassigned"
+- Company names, organization names, or business names should never be used as assignees
+- Examples: "James Daniel Whitford" → "James", "Sarah Johnson" → "Sarah", "Aetherbloom" → "Della" (if Della represents Aetherbloom) or "Unassigned"
 - For action items without clear assignees, use "Unassigned"
 - Infer priority based on urgency words or context
 - Be conservative with due dates - only extract if clearly mentioned
@@ -55,7 +69,7 @@ Important notes:
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant that extracts structured meeting data from emails. Always respond with valid JSON."
+          content: "You are a helpful assistant that extracts structured meeting data from emails. Always respond with valid JSON. When a meeting summary already exists in the content, preserve it exactly as written rather than creating a new summary. Use only first names for task assignees and recognize that company names like 'Aetherbloom' are not people."
         },
         {
           role: "user",
@@ -63,7 +77,7 @@ Important notes:
         }
       ],
       temperature: 0.1, // Low temperature for consistent parsing
-      max_tokens: 1000
+      max_tokens: 2000 // Increased to handle longer summaries
     })
 
     const response = completion.choices[0]?.message?.content
