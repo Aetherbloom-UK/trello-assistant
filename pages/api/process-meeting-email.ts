@@ -150,7 +150,7 @@ async function processEmailAsync(emailId: string): Promise<void> {
       parsedData.meeting_date // Pass the meeting date here
     )
 
-    // Final update: mark as completed
+    // Mark as completed first (for logging/tracking purposes)
     await supabase
       .from('emails')
       .update({
@@ -165,8 +165,30 @@ async function processEmailAsync(emailId: string): Promise<void> {
     console.log(`Created summary card: ${summaryCardId}`)
     console.log(`Created ${actionItemCardIds.length} action item cards`)
 
+    // Delete the database record after successful completion
+    const { error: deleteError } = await supabase
+      .from('emails')
+      .delete()
+      .eq('id', emailId)
+
+    if (deleteError) {
+      console.error(`Failed to delete completed email record ${emailId}:`, deleteError)
+      // Don't throw error here - the processing was successful, deletion is just cleanup
+    } else {
+      console.log(`Successfully deleted completed email record ${emailId}`)
+    }
+
   } catch (error) {
     console.error(`Processing failed for email ${emailId}:`, error)
+    
+    // Get current retry count before updating
+    const { data: currentRecord } = await supabase
+      .from('emails')
+      .select('retry_count')
+      .eq('id', emailId)
+      .single()
+
+    const currentRetryCount = currentRecord?.retry_count || 0
     
     // Mark as failed and store error
     await supabase
@@ -174,7 +196,8 @@ async function processEmailAsync(emailId: string): Promise<void> {
       .update({
         status: 'failed',
         error_message: error instanceof Error ? error.message : 'Unknown error',
-        retry_count: supabase.from('emails').select('retry_count').eq('id', emailId).then(r => (r.data?.[0]?.retry_count || 0) + 1)
+        retry_count: currentRetryCount + 1,
+        last_retry_at: new Date().toISOString()
       })
       .eq('id', emailId)
   }

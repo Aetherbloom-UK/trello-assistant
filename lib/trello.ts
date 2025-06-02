@@ -39,18 +39,39 @@ export class TrelloClient {
       const cardName = `Meeting Summary: ${originalEmailSubject.replace(/^(Fwd:|Re:)\s*/i, '')}`
       const cardDescription = this.formatMeetingSummaryDescription(meetingData)
 
+      // Prepare card data
+      const cardData: any = {
+        name: cardName,
+        desc: cardDescription,
+        idList: MEETING_SUMMARIES_LIST_ID,
+        pos: 'top' // Add to top of list
+      }
+
+      // Always add a due date for meeting summary cards
+      // Use the meeting date if available, otherwise use current date
+      let cardDueDate: string
+      if (meetingData.meeting_date) {
+        // If meeting_date includes time, use it; otherwise add a default time
+        if (meetingData.meeting_date.includes(':')) {
+          cardDueDate = new Date(meetingData.meeting_date).toISOString()
+        } else {
+          // Add default time of 12:00 PM for date-only strings
+          cardDueDate = new Date(meetingData.meeting_date + 'T12:00:00').toISOString()
+        }
+      } else {
+        // Fallback to current date with current time
+        cardDueDate = new Date().toISOString()
+      }
+
+      cardData.due = cardDueDate
+
       const response = await axios.post(
         `${TRELLO_API_BASE}/cards?${this.authParams}`,
-        {
-          name: cardName,
-          desc: cardDescription,
-          idList: MEETING_SUMMARIES_LIST_ID,
-          pos: 'top' // Add to top of list
-        }
+        cardData
       )
 
       const card: TrelloCard = response.data
-      console.log(`Created meeting summary card: ${card.id}`)
+      console.log(`Created meeting summary card: ${card.id} with due date: ${cardDueDate}`)
       return card.id
 
     } catch (error) {
@@ -87,23 +108,26 @@ export class TrelloClient {
     }
 
     // Determine which date to use for the card
-    let cardDueDate: string | null = null
+    let cardDueDate: string
 
     if (actionItem.due_date) {
       // Use the specific due date if provided
       cardDueDate = new Date(actionItem.due_date).toISOString()
     } else if (meetingDate) {
       // Use the meeting date if no specific due date is provided
-      cardDueDate = new Date(meetingDate).toISOString()
+      if (meetingDate.includes(':')) {
+        cardDueDate = new Date(meetingDate).toISOString()
+      } else {
+        // Add default time for date-only strings
+        cardDueDate = new Date(meetingDate + 'T12:00:00').toISOString()
+      }
     } else {
       // Fall back to current date if no other date is available
       cardDueDate = new Date().toISOString()
     }
 
     // Add the determined due date to the card
-    if (cardDueDate) {
-      cardData.due = cardDueDate
-    }
+    cardData.due = cardDueDate
 
     const response = await axios.post(
       `${TRELLO_API_BASE}/cards?${this.authParams}`,

@@ -25,7 +25,7 @@ Please extract the following information and return it as a JSON object:
 
 3. Meeting participants
 
-4. Meeting date/time if mentioned
+4. Meeting date/time if mentioned - look for specific dates, times, or phrases like "today", "yesterday", "this morning", etc.
 
 Return the data in this exact JSON format:
 {
@@ -41,7 +41,7 @@ Return the data in this exact JSON format:
     }
   ],
   "participants": ["Name 1", "Name 2"],
-  "meeting_date": "YYYY-MM-DD HH:mm or null if not found"
+  "meeting_date": "YYYY-MM-DD HH:mm or null if not found (be thorough in looking for dates)"
 }
 
 Important notes for summary extraction:
@@ -61,6 +61,13 @@ Important notes for action items and assignees:
 - Infer priority based on urgency words or context
 - Be conservative with due dates - only extract if clearly mentioned
 - Generate unique IDs for action items using format: "ai_" + random string
+
+Important notes for meeting dates:
+- Look carefully for any date references in the content
+- Check for relative dates like "today", "yesterday", "this morning", "last Friday"
+- Check for explicit dates in various formats (June 1, 2025, 06/01/2025, 2025-06-01, etc.)
+- Check email headers or signatures for meeting dates
+- If no date is found, return null (we will set current date as fallback)
 `
 
   try {
@@ -69,7 +76,7 @@ Important notes for action items and assignees:
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant that extracts structured meeting data from emails. Always respond with valid JSON. When a meeting summary already exists in the content, preserve it exactly as written rather than creating a new summary. Use only first names for task assignees and recognize that company names like 'Aetherbloom' are not people."
+          content: "You are a helpful assistant that extracts structured meeting data from emails. Always respond with valid JSON. When a meeting summary already exists in the content, preserve it exactly as written rather than creating a new summary. Use only first names for task assignees and recognize that company names like 'Aetherbloom' are not people. Be thorough in extracting meeting dates."
         },
         {
           role: "user",
@@ -111,11 +118,19 @@ Important notes for action items and assignees:
 
 function validateParsedData(data: any): ParsedMeetingData {
   // Ensure required fields exist and have correct types
+  let meetingDate = data.meeting_date
+
+  // If no meeting date was extracted, use current date as fallback
+  if (!meetingDate || meetingDate === null || meetingDate === 'null') {
+    meetingDate = new Date().toISOString().split('T')[0] // Current date in YYYY-MM-DD format
+    console.log('No meeting date found in content, using current date as fallback:', meetingDate)
+  }
+
   const validated: ParsedMeetingData = {
     summary: typeof data.summary === 'string' ? data.summary : 'Unable to extract meeting summary',
     action_items: Array.isArray(data.action_items) ? data.action_items.map(validateActionItem) : [],
     participants: Array.isArray(data.participants) ? data.participants.filter((p: unknown): p is string => typeof p === 'string') : [],
-    meeting_date: typeof data.meeting_date === 'string' ? data.meeting_date : undefined
+    meeting_date: meetingDate
   }
 
   return validated
